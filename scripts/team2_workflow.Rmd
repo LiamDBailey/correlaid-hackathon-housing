@@ -15,6 +15,9 @@ library(dplyr)
 library(ggplot2)
 library(here)
 
+#Options
+options(scipen = 200)
+
 ```
 
 Load the data
@@ -52,7 +55,14 @@ housing_coords <- df_sf %>%
   as_tibble()
 
 ggplot() +
-  stat_density2d_filled(data = housing_coords, aes(x = X, y = Y)) +
-  geom_sf(data = paris, fill = NA, colour = "black", size = 1, alpha = 0.75)
+  stat_density2d_filled(data = housing_coords, aes(x = X, y = Y),
+                        contour_var = "ndensity") +
+  geom_sf(data = paris, fill = NA, colour = "black", size = 1, alpha = 0.75) +
+  scale_fill_viridis_d(name = "Relative housing density",
+                      labels = c("0-0.1", "0.1-0.2", "0.2-0.3", "0.3-0.4",
+                                 "0.4-0.5", "0.5-0.6", "0.6-0.7", "0.7-0.8",
+                                 "0.8-0.9", "0.9-1.0")) +
+  theme(panel.background = element_rect(fill = "#440154FF"),
+        panel.grid = element_blank())
 
 ```
