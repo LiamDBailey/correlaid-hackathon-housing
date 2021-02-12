@@ -13,15 +13,25 @@ library(osmdata)
 library(raster)
 library(dplyr)
 library(ggplot2)
+library(here)
 
 ```
 
+Load the data
+
 ```{r}
 
-df <- read.csv2("data/social-housing-paris/logements-sociaux-finances-a-paris.csv",
+df <- read.csv2(here::here("./data/social-housing-paris/logements-sociaux-finances-a-paris.csv"),
                 stringsAsFactors = FALSE) %>% 
   janitor::clean_names()
-df_sf <- sf::read_sf("data/social-housing-paris/logements-sociaux-finances-a-paris.geojson")
+
+df_sf <- sf::read_sf(here::here("./data/social-housing-paris/logements-sociaux-finances-a-paris.geojson"))
+
+```
+
+Districts
+
+```{r}
 
 paris <- raster::getData(name = "GADM", country = "FRA", level = 3) %>% 
   sf::st_as_sf() %>% 
@@ -30,5 +40,19 @@ paris <- raster::getData(name = "GADM", country = "FRA", level = 3) %>%
 ggplot()+
   geom_sf(data = paris) +
   geom_sf(data = df_sf)
+
+```
+
+Contour map
+
+```{r}
+
+housing_coords <- df_sf %>% 
+  sf::st_coordinates() %>% 
+  as_tibble()
+
+ggplot() +
+  stat_density2d_filled(data = housing_coords, aes(x = X, y = Y)) +
+  geom_sf(data = paris, fill = NA, colour = "black", size = 1, alpha = 0.75)
 
 ```
