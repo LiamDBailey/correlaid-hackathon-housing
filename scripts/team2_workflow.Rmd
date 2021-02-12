@@ -117,3 +117,83 @@ leaflet(paris_density) %>%
   popup = ~NAME_3)
 
 ```
+
+Add HTML labels
+
+```{r}
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g social housing / km<sup>2</sup>",
+  paris_density$NAME_3, round(paris_density$density, 2)
+) %>% lapply(htmltools::HTML)
+
+leaflet(paris_density) %>%
+  addTiles(group = "OSM") %>%
+  addPolygons(
+    fillColor = ~pal(density),
+    weight = 2,
+    opacity = 1,
+    color = "white",
+    dashArray = "3",
+    fillOpacity = 0.7,
+    label = labels,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal", padding = "3px 8px"),
+      textsize = "15px",
+      direction = "auto"))
+
+```
+
+Create a loop to extract information for every year
+
+```{r}
+
+paris <- paris %>% 
+  mutate(polygon_nr = 1:n())
+
+housing_peryear <- purrr::map_df(.x = unique(df_sf$annee),
+           .f = function(year, paris_districts){
+             
+             print(year)
+             
+             houses_per_year <- df_sf %>% 
+               filter(annee == year)
+             
+             houses_per_district <- houses_per_year %>% 
+               sf::st_within(paris_districts, sparse = FALSE) %>% 
+               which(arr.ind = TRUE) %>% 
+               as_tibble() %>% 
+               group_by(col) %>% 
+               summarise(nr_houses = n()) %>% 
+               rename(polygon_nr = col)
+             
+             paris_density <- paris_districts %>% 
+               left_join(houses_per_district, by = "polygon_nr") %>% 
+               mutate(area = as.numeric(sf::st_area(.))/1000000,
+                      density = nr_houses/area,
+                      start = as.Date(paste0(year, "/01/01")),
+                      end = as.Date(paste0(year, "/12/31")))
+             
+             paris_density
+             
+           }, paris_districts = paris)
+
+```
+
+Add a timeline
+
+```{r}
+
+library(leaftime)
+
+points_over_time <- df_sf %>% 
+  mutate(start = as.Date(paste0(annee, "/01/01")),
+         end = as.Date(paste0(annee, "/12/31"))) %>% 
+  mutate(coord = sf::st_coordinates(.))
+
+leaflet() %>%
+  addTiles(group = "OSM") %>% 
+  addTimeline(data = points_over_time)
+
+```
+
